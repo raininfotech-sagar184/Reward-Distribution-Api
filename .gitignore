@@ -1,0 +1,11 @@
+.history/
+.vscode
+.lh/
+.idea/
+.DS*
+._*
+package-lock.json
+node_modules/
+.env*
+/utils/pem/*
+price.json
