@@ -3,40 +3,28 @@ const { check_user_login, sendMembershipVoucherMail, checkNftLimitQty, bookNft, 
 const { get_timestemp, enc, encryption_key, dec, to_float, trunc, getDecimalDivison, getCurrentTimestampinMiliSeconds } = require("../../utils/Common")
 const Web3 = require('web3')
 
-const membershipPlanList = async (req, res) => {
+const packageList = async (req, res) => {
 	try {
-		let user = await check_user_login(req);
-		if (!user.status || !user.data.userId) {
-			return res.status(400).json({ message: "Unauthorized" });
-		}
+		// let user = await check_user_login(req);
+		// if (!user.status || !user.data.userId) {
+		// 	return res.status(400).json({ message: "Unauthorized" });
+		// } 
 		let list = await sql_query(
-			"SELECT REVERSE(MD5(slr_membershipPlanId)) as membershipPlanId, package_name, description, price, offerPrice, voucherDiscount, totalActivityMonth, isOffer, nftSerialId FROM tblslr_membershipPlan",
+			"SELECT packageId, name, image, amount, description, status, createdOn  FROM tblPackage",
 			[],
 			'Multi'
 		);
-		if (list.length > 0) {
-			const now = get_timestemp()
-			let getUsersMemberships = await sql_query(
-				"SELECT REVERSE(MD5(slr_membershipPlanId)) as membershipPlanId, endOn,status FROM tblslr_userMembershipPlan WHERE userId = ? AND payStatus = ? and status =? and endOn > ?",
-				[user.data.userId, 1, 1, now],
-				"Multi"
-			);
-
-			const serialIds = list.filter(plan => plan.nftSerialId > 0).map(plan => plan.nftSerialId);
-			const serialListData = await sql_query("SELECT serialId, name,serialType FROM tblserial where serialId in (?)", [serialIds], "multi");
-			let getAddress = await sql_query("SELECT nftBxnAddress,schAddress FROM tbluserDetailOfNft21 WHERE userId = ?", [user.data.userId])
-
-			list = list.map((j) => {
-				const userMembership = getUsersMemberships.find(m => m.membershipPlanId == j.membershipPlanId);
-				const isSerialExist = serialListData.find((serial) => serial.serialId == j.nftSerialId);
+		if (list.length > 0) { 
+			list = list.map((j) => { 
 				let newData = {
 					...j,
-					serialName: isSerialExist ? isSerialExist.name : "",
-					schAddress: (isSerialExist && isSerialExist.serialType == 1 && getAddress) && getAddress.schAddress || "",
-					bxnAddress: getAddress && getAddress.nftBxnAddress || "",
-					isActiveMembership: userMembership ? true : false,
-					membershipExpireAfter: userMembership ? userMembership.endOn : 0,
-					serialType: isSerialExist ? isSerialExist.serialType : -1
+					packageId: j?.packageId ?  j.packageId : "",
+					name: j?.name ?  j.name : "",
+					image: j?.image ?  j.image : "",
+					amount: j?.amount ?  j.amount : 0,
+					description: j?.description ?  j.description : "",
+					status: j?.status ?  j.status : 0,
+					createdOn: j?.createdOn ?  j.createdOn :0, 
 				};
 				delete newData.nftSerialId;
 				return newData;
@@ -46,38 +34,38 @@ const membershipPlanList = async (req, res) => {
 		}
 		return res.status(200).json({ list });
 	} catch (e) {
-		console.log("Error membershipPlanList", e);
+		console.log("Error packageList", e);
 	}
 
 	return res.status(400).json({ message: "Session Expired! Please refresh page" });
 };
 
-const membershipPlan = async (req, res) => {
-	try {
-		let user = await check_user_login(req)
-		if (!user.status || !user.data.userId) {
-			return res.status(400).json({ message: "Unauthorized" })
-		}
-		let { membershipId } = req.query
-		if (membershipId) {
-			let data = await sql_query("SELECT REVERSE(MD5(slr_membershipPlanId)) as membershipPlanId, price, offerPrice FROM tblslr_membershipPlan WHERE REVERSE(MD5(slr_membershipPlanId)) = ?", [membershipId]);
-			if (data) {
-				let priceAmount = parseFloat(data.offerPrice) > 0 ? parseFloat(data.offerPrice) : parseFloat(data.price);
-				const membershipData = {
-					membershipPlanId: data.membershipPlanId,
-					price: priceAmount,
-				};
-				return res.status(200).json({ data: membershipData });
-			}
+// const membershipPlan = async (req, res) => {
+// 	try {
+// 		let user = await check_user_login(req)
+// 		if (!user.status || !user.data.userId) {
+// 			return res.status(400).json({ message: "Unauthorized" })
+// 		}
+// 		let { membershipId } = req.query
+// 		if (membershipId) {
+// 			let data = await sql_query("SELECT REVERSE(MD5(slr_membershipPlanId)) as membershipPlanId, price, offerPrice FROM tblslr_membershipPlan WHERE REVERSE(MD5(slr_membershipPlanId)) = ?", [membershipId]);
+// 			if (data) {
+// 				let priceAmount = parseFloat(data.offerPrice) > 0 ? parseFloat(data.offerPrice) : parseFloat(data.price);
+// 				const membershipData = {
+// 					membershipPlanId: data.membershipPlanId,
+// 					price: priceAmount,
+// 				};
+// 				return res.status(200).json({ data: membershipData });
+// 			}
 
-		}
-	} catch (e) {
-		console.log("Error membershipPlan", e)
-	}
-	return res.status(400).json({ message: "Session Expired! Please refresh page" })
-}
+// 		}
+// 	} catch (e) {
+// 		console.log("Error membershipPlan", e)
+// 	}
+// 	return res.status(400).json({ message: "Session Expired! Please refresh page" })
+// }
 
-const buyMembershipPlan = async (req, res) => {
+const buyPackage = async (req, res) => {
 	try {
 		let user = await check_user_login(req)
 		if (!user.status || !user.data.userId) {
@@ -377,170 +365,170 @@ const buyMembershipPlan = async (req, res) => {
 			}
 		}
 	} catch (e) {
-		console.log("Error buyMembershipPlan", e)
+		console.log("Error buyPackage", e)
 	}
 	return res.status(400).json({ message: "Session Expired! Please refresh page" })
 }
 
-function generateAdminSignForActiveMemberShip(data) {
-	console.log("data==", data);
-	let web3 = new Web3()
-	web3.eth.defaultAccount = process?.env?.MULTISEND_SIGNER_ADDRESS
-	let decimal = process?.env?.USDT_DECIMAL
-	let adminPkey = dec(process.env.MULTISEND_SIGNER_PRIVATE_KEY, encryption_key('admin_private_key'));
-	console.log("adminPkey-", adminPkey);
-	let uniPlanAddresses = web3.utils.soliditySha3("--" + data.uniPlanAddresses.toString().replaceAll(',', ''));
-	console.log("uniPlanAddresses--", uniPlanAddresses);
-	let uniPalnAmounttoDecimal = data.uniPlanAmounts.map(amt => {
-		const convertedAmt = getDecimalDivison(amt, decimal, 0);
-		return convertedAmt;
-	})
-	let uniPlanAmountStr = web3.utils.soliditySha3(uniPalnAmounttoDecimal.map(amt => amt).toString().replaceAll(',', '') + "-");
-	// let uniPlanAmountStr = web3.utils.soliditySha3(data.uniPlanAmounts.map(amt => getDecimalDivison(amt, decimal, 0)).toString().replaceAll(',', '') + "-");
-	console.log("uniPlanAmountStr--", uniPlanAmountStr);
-	let matrixAddresses = web3.utils.soliditySha3("--" + data.matrixAddresses.toString().replaceAll(',', ''));
-	console.log("matrixAddresses--", matrixAddresses);
+// function generateAdminSignForActiveMemberShip(data) {
+// 	console.log("data==", data);
+// 	let web3 = new Web3()
+// 	web3.eth.defaultAccount = process?.env?.MULTISEND_SIGNER_ADDRESS
+// 	let decimal = process?.env?.USDT_DECIMAL
+// 	let adminPkey = dec(process.env.MULTISEND_SIGNER_PRIVATE_KEY, encryption_key('admin_private_key'));
+// 	console.log("adminPkey-", adminPkey);
+// 	let uniPlanAddresses = web3.utils.soliditySha3("--" + data.uniPlanAddresses.toString().replaceAll(',', ''));
+// 	console.log("uniPlanAddresses--", uniPlanAddresses);
+// 	let uniPalnAmounttoDecimal = data.uniPlanAmounts.map(amt => {
+// 		const convertedAmt = getDecimalDivison(amt, decimal, 0);
+// 		return convertedAmt;
+// 	})
+// 	let uniPlanAmountStr = web3.utils.soliditySha3(uniPalnAmounttoDecimal.map(amt => amt).toString().replaceAll(',', '') + "-");
+// 	// let uniPlanAmountStr = web3.utils.soliditySha3(data.uniPlanAmounts.map(amt => getDecimalDivison(amt, decimal, 0)).toString().replaceAll(',', '') + "-");
+// 	console.log("uniPlanAmountStr--", uniPlanAmountStr);
+// 	let matrixAddresses = web3.utils.soliditySha3("--" + data.matrixAddresses.toString().replaceAll(',', ''));
+// 	console.log("matrixAddresses--", matrixAddresses);
 
-	let matrixAmounttoDecimal = data.matixAmounts.map(amt => {
-		const convertedAmt = getDecimalDivison(amt, decimal, 0);
-		return convertedAmt;
-	})
-	console.log({ matrixAmounttoDecimal });
-	let matrixPlanAmountStr = web3.utils.soliditySha3(matrixAmounttoDecimal.map(amt => amt).toString().replaceAll(',', '') + "-");
-	// let matrixPlanAmountStr = web3.utils.soliditySha3(data.matixAmounts.map(amt => getDecimalDivison(amt, decimal, 0)).toString().replaceAll(',', '') + "-");
-	console.log("matrixPlanAmountStr--", matrixPlanAmountStr);
+// 	let matrixAmounttoDecimal = data.matixAmounts.map(amt => {
+// 		const convertedAmt = getDecimalDivison(amt, decimal, 0);
+// 		return convertedAmt;
+// 	})
+// 	console.log({ matrixAmounttoDecimal });
+// 	let matrixPlanAmountStr = web3.utils.soliditySha3(matrixAmounttoDecimal.map(amt => amt).toString().replaceAll(',', '') + "-");
+// 	// let matrixPlanAmountStr = web3.utils.soliditySha3(data.matixAmounts.map(amt => getDecimalDivison(amt, decimal, 0)).toString().replaceAll(',', '') + "-");
+// 	console.log("matrixPlanAmountStr--", matrixPlanAmountStr);
 
-	let signHash = web3.utils.soliditySha3(
-		data.address,
-		data.tokenAddress,
-		data.planAmount,
-		uniPlanAddresses,
-		uniPlanAmountStr,
-		matrixAddresses,
-		matrixPlanAmountStr,
-		data.matrixUplineString,
-		data.id,
-		data.deadline
-	)
+// 	let signHash = web3.utils.soliditySha3(
+// 		data.address,
+// 		data.tokenAddress,
+// 		data.planAmount,
+// 		uniPlanAddresses,
+// 		uniPlanAmountStr,
+// 		matrixAddresses,
+// 		matrixPlanAmountStr,
+// 		data.matrixUplineString,
+// 		data.id,
+// 		data.deadline
+// 	)
 
-	console.log("signHash--", signHash);
-	let adminSignature = web3.eth.accounts.sign(signHash, '0x' + adminPkey)
-	console.log("adminSignature===>", adminSignature);
-	return adminSignature
-}
+// 	console.log("signHash--", signHash);
+// 	let adminSignature = web3.eth.accounts.sign(signHash, '0x' + adminPkey)
+// 	console.log("adminSignature===>", adminSignature);
+// 	return adminSignature
+// }
 
-async function getVoucherCode() {
-	try {
-		let voucher_codes = require('voucher-code-generator')
-		let isVoucherExist
-		let couponCode = []
-		do {
-			couponCode = voucher_codes.generate({
-				length: 6,
-				count: 1,
-				charset: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-			})
-			isVoucherExist = await sql_query(`SELECT * FROM tblvoucher WHERE tblvoucher.couponCode='${couponCode[0]}'`)
-		}
-		while (isVoucherExist)
-		return couponCode
-	} catch (e) {
-		console.log(e)
-	}
-}
+// async function getVoucherCode() {
+// 	try {
+// 		let voucher_codes = require('voucher-code-generator')
+// 		let isVoucherExist
+// 		let couponCode = []
+// 		do {
+// 			couponCode = voucher_codes.generate({
+// 				length: 6,
+// 				count: 1,
+// 				charset: "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+// 			})
+// 			isVoucherExist = await sql_query(`SELECT * FROM tblvoucher WHERE tblvoucher.couponCode='${couponCode[0]}'`)
+// 		}
+// 		while (isVoucherExist)
+// 		return couponCode
+// 	} catch (e) {
+// 		console.log(e)
+// 	}
+// }
 
-async function sendFreeNftToUser(userId, plan, txData, hash) {
-	console.log("send free nft to user--", (userId, plan, txData, hash));
-	let serialData = await checkNftLimitQty(plan.nftSerialId, 1)
-	let currentTime = get_timestemp()
+// async function sendFreeNftToUser(userId, plan, txData, hash) {
+// 	console.log("send free nft to user--", (userId, plan, txData, hash));
+// 	let serialData = await checkNftLimitQty(plan.nftSerialId, 1)
+// 	let currentTime = get_timestemp()
 
-	if (!serialData[0]) {
-		await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", [serialData[1], currentTime, txData.slr_membershipPlanPaymentHistoryId])
-	} else {
-		let getAddress, checkSerial = serialData[1], fromId = []
-		getAddress = await sql_query("SELECT nftBxnAddress,schAddress FROM tbluserDetailOfNft21 WHERE userId = ?", [userId])
-		if (checkSerial?.serialType == 0 && checkSerial?.nftBxnAddress || (checkSerial?.serialType == 1 && getAddress?.schAddress && checkSerial?.nftBxnAddress) || checkSerial?.serialType == 2 && checkSerial?.nftBxnAddress) {
-			if (checkSerial.serialType == 2) {
-				fromId = await bookJockerNft({ userId: userId, nftBxnAddress: getAddress.nftBxnAddress }, checkSerial.serialId, 1, 1, 0)
-			} else {
-				fromId = await bookNft({ userId: userId, nftBxnAddress: getAddress.nftBxnAddress }, checkSerial.serialId, 1, 1, 0)
-			}
-			if (fromId) {
-				await sql_query(`INSERT INTO tbltransaction (userId,amount,euroPrice,coinType,type,details,fromId,createdOn,updatedOn) VALUES (?,?,?,?,?,?,?,?,?)`, [
-					userId,
-					0,
-					0,
-					0,
-					3,
-					`Get a free NFT from SOLARES on purchasing the  ${plan.package_name} membership`,
-					fromId,
-					currentTime,
-					currentTime
-				], "Insert")
+// 	if (!serialData[0]) {
+// 		await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", [serialData[1], currentTime, txData.slr_membershipPlanPaymentHistoryId])
+// 	} else {
+// 		let getAddress, checkSerial = serialData[1], fromId = []
+// 		getAddress = await sql_query("SELECT nftBxnAddress,schAddress FROM tbluserDetailOfNft21 WHERE userId = ?", [userId])
+// 		if (checkSerial?.serialType == 0 && checkSerial?.nftBxnAddress || (checkSerial?.serialType == 1 && getAddress?.schAddress && checkSerial?.nftBxnAddress) || checkSerial?.serialType == 2 && checkSerial?.nftBxnAddress) {
+// 			if (checkSerial.serialType == 2) {
+// 				fromId = await bookJockerNft({ userId: userId, nftBxnAddress: getAddress.nftBxnAddress }, checkSerial.serialId, 1, 1, 0)
+// 			} else {
+// 				fromId = await bookNft({ userId: userId, nftBxnAddress: getAddress.nftBxnAddress }, checkSerial.serialId, 1, 1, 0)
+// 			}
+// 			if (fromId) {
+// 				await sql_query(`INSERT INTO tbltransaction (userId,amount,euroPrice,coinType,type,details,fromId,createdOn,updatedOn) VALUES (?,?,?,?,?,?,?,?,?)`, [
+// 					userId,
+// 					0,
+// 					0,
+// 					0,
+// 					3,
+// 					`Get a free NFT from SOLARES on purchasing the  ${plan.package_name} membership`,
+// 					fromId,
+// 					currentTime,
+// 					currentTime
+// 				], "Insert")
 
-				await sql_query(`INSERT INTO tblslr_transaction (userId,coinAmount,usdAmount,coinType,type,details,fromId,createdOn,updatedOn,hash) VALUES (?,?,?,?,?,?,?,?,?,?)`, [
-					userId,
-					0,
-					0,
-					0,
-					13,
-					`Get a free NFT on purchasing the  ${plan.package_name} membership`,
-					fromId,
-					currentTime,
-					currentTime,
-					hash
-				], "Insert")
+// 				await sql_query(`INSERT INTO tblslr_transaction (userId,coinAmount,usdAmount,coinType,type,details,fromId,createdOn,updatedOn,hash) VALUES (?,?,?,?,?,?,?,?,?,?)`, [
+// 					userId,
+// 					0,
+// 					0,
+// 					0,
+// 					13,
+// 					`Get a free NFT on purchasing the  ${plan.package_name} membership`,
+// 					fromId,
+// 					currentTime,
+// 					currentTime,
+// 					hash
+// 				], "Insert")
 
-				let getNftId, trans
-				if (checkSerial.serialType == 2) {
-					console.log("checkSerial.serialType---2=== get nftid");
-					getNftId = await sql_query(`SELECT u.userJockerSerialNftId,u.jockerSerialnftId,n.tokenId FROM tbluserJockerSerialNft as u,tbljockerSerialnft as n WHERE u.userJockerSerialNftId = ? and n.jockerSerialnftId = u.jockerSerialnftId`, [fromId])
-				} else {
-					console.log("checkSerial.serialType---0 and 1=== get nftid");
-					getNftId = await sql_query(`SELECT u.userSerialNftId,n.tokenId,u.nftId FROM tbluserSerialNft as u,tblnft as n WHERE u.userSerialNftId = ? and n.nftId = u.nftId`, [fromId])
-				}
+// 				let getNftId, trans
+// 				if (checkSerial.serialType == 2) {
+// 					console.log("checkSerial.serialType---2=== get nftid");
+// 					getNftId = await sql_query(`SELECT u.userJockerSerialNftId,u.jockerSerialnftId,n.tokenId FROM tbluserJockerSerialNft as u,tbljockerSerialnft as n WHERE u.userJockerSerialNftId = ? and n.jockerSerialnftId = u.jockerSerialnftId`, [fromId])
+// 				} else {
+// 					console.log("checkSerial.serialType---0 and 1=== get nftid");
+// 					getNftId = await sql_query(`SELECT u.userSerialNftId,n.tokenId,u.nftId FROM tbluserSerialNft as u,tblnft as n WHERE u.userSerialNftId = ? and n.nftId = u.nftId`, [fromId])
+// 				}
 
-				console.log("getNftId=====", getNftId);
-				if (getNftId) {
-					console.log("getNftId inn", getNftId.tokenId);
-					let tokenIds = getNftId.tokenId
-					console.log("tokenIds==", tokenIds);
-					if (tokenIds) {
-						console.log("in token ids");
-						console.log("checkSerial.serialType--", checkSerial.serialType);
-						if (checkSerial.serialType == 2) {
-							console.log("check jocker ghost nft");
-							await getJockerGhostNft(userId, checkSerial.serialId)
-							console.log("getAddress.nftBxnAddress== jocket transfer nft==", getAddress.nftBxnAddress);
-							trans = await transferJockerNft([tokenIds], getAddress.nftBxnAddress, fromId)
-						} else {
-							console.log("check for wizard");
-							await getWizardNft(userId, checkSerial.serialId)
-							console.log("getAddress.nftBxnAddress== transfer nft==", getAddress.nftBxnAddress);
-							console.log("tokenIds==", tokenIds);
-							console.log("fromId==", fromId);
-							trans = await transferNft([tokenIds], getAddress.nftBxnAddress, fromId)
-						}
+// 				console.log("getNftId=====", getNftId);
+// 				if (getNftId) {
+// 					console.log("getNftId inn", getNftId.tokenId);
+// 					let tokenIds = getNftId.tokenId
+// 					console.log("tokenIds==", tokenIds);
+// 					if (tokenIds) {
+// 						console.log("in token ids");
+// 						console.log("checkSerial.serialType--", checkSerial.serialType);
+// 						if (checkSerial.serialType == 2) {
+// 							console.log("check jocker ghost nft");
+// 							await getJockerGhostNft(userId, checkSerial.serialId)
+// 							console.log("getAddress.nftBxnAddress== jocket transfer nft==", getAddress.nftBxnAddress);
+// 							trans = await transferJockerNft([tokenIds], getAddress.nftBxnAddress, fromId)
+// 						} else {
+// 							console.log("check for wizard");
+// 							await getWizardNft(userId, checkSerial.serialId)
+// 							console.log("getAddress.nftBxnAddress== transfer nft==", getAddress.nftBxnAddress);
+// 							console.log("tokenIds==", tokenIds);
+// 							console.log("fromId==", fromId);
+// 							trans = await transferNft([tokenIds], getAddress.nftBxnAddress, fromId)
+// 						}
 
-						if (trans) {
-							if (checkSerial?.serialType == 1) {
-								console.log("sch serila sch reward==-===-==-==-========");
-								let getUserNftData = await sql_query(`select userSerialNftId,oneTimeBenefit,serialCardDetailsId,serialId from tbluserSerialNft WHERE userSerialNftId = ?`, [fromId])
-								console.log("getUserNftData for sch reward==", getUserNftData);
-								if (getUserNftData) getOneTimeSchReward(userId, getUserNftData, getAddress?.schAddress)
-							}
-						} else {
-							await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", ["NFT not transfer", currentTime, txData.slr_membershipPlanPaymentHistoryId])
+// 						if (trans) {
+// 							if (checkSerial?.serialType == 1) {
+// 								console.log("sch serila sch reward==-===-==-==-========");
+// 								let getUserNftData = await sql_query(`select userSerialNftId,oneTimeBenefit,serialCardDetailsId,serialId from tbluserSerialNft WHERE userSerialNftId = ?`, [fromId])
+// 								console.log("getUserNftData for sch reward==", getUserNftData);
+// 								if (getUserNftData) getOneTimeSchReward(userId, getUserNftData, getAddress?.schAddress)
+// 							}
+// 						} else {
+// 							await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", ["NFT not transfer", currentTime, txData.slr_membershipPlanPaymentHistoryId])
 
-						}
-					}
-				}
-			}
-		} else {
-			await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", [`${checkSerial.serialType == 1 ? "SCH OR BXN" : "BXN "} address is not locked on the NFT21 site`, currentTime, txData.slr_membershipPlanPaymentHistoryId])
+// 						}
+// 					}
+// 				}
+// 			}
+// 		} else {
+// 			await sql_query("UPDATE tblslr_membershipPlanPaymentHistory SET nftDetail = ?,  updatedOn=? WHERE slr_membershipPlanPaymentHistoryId = ?", [`${checkSerial.serialType == 1 ? "SCH OR BXN" : "BXN "} address is not locked on the NFT21 site`, currentTime, txData.slr_membershipPlanPaymentHistoryId])
 
-		}
-	}
-}
+// 		}
+// 	}
+// }
 
-module.exports = { membershipPlanList, membershipPlan, buyMembershipPlan, generateAdminSignForActiveMemberShip, sendFreeNftToUser }
+module.exports = { packageList, buyPackage,  }

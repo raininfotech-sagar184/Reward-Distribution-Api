@@ -6,7 +6,7 @@ const AuthRoute = require('./AuthRoute');
 const UserRoute = require('./User');
 const FooterDatasRoute = require('./FooterDatasRoute');
 const TestRoute = require('./TestRoute');
-const MembershipPlanRoute = require('./Membershipplan');
+const PackageRoute = require('./PackageRoute');
 const Cron = require('./CronRoute')
 router.use(AuthRoute);
 router.use(FooterDatasRoute);
@@ -14,6 +14,6 @@ router.use(TestRoute);
 router.use(Cron);
 
 router.use(authMiddleware,UserRoute);
-router.use(authMiddleware,MembershipPlanRoute);
+router.use(authMiddleware,PackageRoute);
 
 module.exports = router;
